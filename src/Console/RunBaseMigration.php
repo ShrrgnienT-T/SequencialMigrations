@@ -1,9 +1,9 @@
 <?php
 
-namespace OrdererMigrations\Console;
+namespace SequencialMigrations\Console;
 
 use Illuminate\Console\Command;
-use OrdererMigrations\BaseMigration;
+use SequencialMigrations\BaseMigration;
 
 class RunBaseMigration extends Command
 {

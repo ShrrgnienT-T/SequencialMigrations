@@ -1,6 +1,6 @@
 <?php
 
-namespace OrdererMigrations\Traits;
+namespace SequencialMigrations\Traits;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
