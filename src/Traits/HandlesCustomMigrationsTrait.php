@@ -13,7 +13,11 @@ trait HandlesCustomMigrationsTrait {
             'executadas' => 0,
             'puladas' => 0,
             'motivos' => [],
+            'erros' => [],
         ];
+        $logPath = database_path('migrations/migrations_log.txt');
+        $log = [];
+        $ordemSugerida = [];
         foreach ($this->migrations as $className) {
             $file = $this->getMigrationFilePath($className);
             $migrationInstance = null;
@@ -42,18 +46,42 @@ trait HandlesCustomMigrationsTrait {
                     $this->registerMigration($className, $file);
                     $relatorio['executadas']++;
                 } catch (\Illuminate\Database\QueryException $e) {
-                    if (str_contains($e->getMessage(), 'already exists')) {
-                        $relatorio['puladas']++;
-                        $relatorio['motivos'][] = "Pulada: $className (tabela já existe ao rodar migration)";
-                        $this->registerMigration($className, $file);
-                        continue;
+                    $relatorio['puladas']++;
+                    $relatorio['motivos'][] = "Pulada: $className (erro de banco: " . $e->getMessage() . ")";
+                    $relatorio['erros'][] = [
+                        'migration' => $className,
+                        'erro' => $e->getMessage(),
+                        'arquivo' => $file,
+                    ];
+                    $log[] = "[ERRO] Migration: $className\nArquivo: $file\nErro: " . $e->getMessage() . "\n";
+                    // Sugestão simples: se erro for de FK, sugere mover para depois da tabela referenciada
+                    if (preg_match('/foreign key constraint.*references `(.*?)`/i', $e->getMessage(), $match)) {
+                        $ordemSugerida[] = "Sugestão: mova $className após a migration que cria a tabela '{$match[1]}'";
                     }
-                    throw $e;
+                    continue;
+                } catch (\Exception $e) {
+                    $relatorio['puladas']++;
+                    $relatorio['motivos'][] = "Pulada: $className (erro inesperado: " . $e->getMessage() . ")";
+                    $relatorio['erros'][] = [
+                        'migration' => $className,
+                        'erro' => $e->getMessage(),
+                        'arquivo' => $file,
+                    ];
+                    $log[] = "[ERRO] Migration: $className\nArquivo: $file\nErro: " . $e->getMessage() . "\n";
+                    continue;
                 }
             } else {
                 $relatorio['puladas']++;
                 $relatorio['motivos'][] = "Pulada: $className (classe não encontrada ou inválida)";
             }
+        }
+        // Escreve log detalhado se houver erros
+        if (!empty($log)) {
+            $logContent = "==== LOG DE ERROS DAS MIGRATIONS ====".PHP_EOL.implode(PHP_EOL, $log);
+            if (!empty($ordemSugerida)) {
+                $logContent .= PHP_EOL."\nSugestões de reordenação:".PHP_EOL.implode(PHP_EOL, $ordemSugerida);
+            }
+            file_put_contents($logPath, $logContent, FILE_APPEND);
         }
         // Exibe relatório
         echo "\n--- Relatório das migrations UP ---\n";
@@ -63,6 +91,12 @@ trait HandlesCustomMigrationsTrait {
             echo "Motivos das puladas:\n";
             foreach ($relatorio['motivos'] as $motivo) {
                 echo "- $motivo\n";
+            }
+        }
+        if (!empty($ordemSugerida)) {
+            echo "\nSugestões de reordenação:\n";
+            foreach ($ordemSugerida as $sug) {
+                echo "- $sug\n";
             }
         }
         echo "-------------------------------\n\n";
