@@ -8,16 +8,21 @@ use SequencialMigrations\Traits\HandlesCustomMigrationsTrait;
 
 class BaseMigration extends Migration
 {
-    /**
-     * Lista de migrations a serem executadas em ordem.
-     * Use apenas o nome da classe (sem namespace).
-     */
-    protected array $migrations = [
-        // Migrations padrão Laravel (classes nomeadas)
-        
-    ];
+    protected array $migrations = [];
 
     use HandlesCustomMigrationsTrait;
+
+    public function __construct()
+    {
+        $file = database_path('migrations/BaseMigration.php');
+        if (file_exists($file)) {
+            $migrations = include $file;
+            if (is_array($migrations)) {
+                $this->migrations = $migrations;
+            }
+        }
+    // Não chama parent::__construct() pois Migration não possui construtor
+    }
 
     public function up()
     {
