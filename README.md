@@ -21,18 +21,30 @@ Pacote Laravel para rodar migrations customizadas de forma sequencial (em ordem 
 - Comando Artisan `migrate:base` para rodar todas as migrations customizadas em ordem, com suporte a `up` e `down`.
 - Não requer registro manual do Service Provider graças ao Laravel Package Discovery.
 
+
 ## Instalação
 
 ```shell
 composer require shrrgnien/sequencial-migrations
 ```
 
+### Publicando o arquivo BaseMigration
+
+Após instalar, publique o arquivo base para definir suas migrations:
+
+```shell
+php artisan vendor:publish --tag=sequencial-migrations-base
+```
+
+Isso irá criar o arquivo `database/migrations/BaseMigration.php` no seu projeto. Edite esse arquivo para definir a ordem das suas migrations.
+
 ## Uso
 
 
-# Sequencial Migrations
-	 - Edite a propriedade `$migrations` em `src/BaseMigration.php` e adicione os nomes das suas migrations.
-Pacote Laravel para rodar migrations customizadas de forma sequencial (em ordem definida).
+
+## Como usar
+
+1. Edite a propriedade `$migrations` em `database/migrations/BaseMigration.php` e adicione os nomes das suas migrations.
 	 - Você pode misturar migrations nomeadas (classes) e migrations anônimas (arquivos que retornam um objeto Migration).
 	 - Exemplo:
 		 ```php
@@ -46,28 +58,19 @@ Pacote Laravel para rodar migrations customizadas de forma sequencial (em ordem 
 	 - Para migrations nomeadas, use apenas o nome da classe (sem namespace).
 	 - Para migrations anônimas, use o nome do arquivo (sem extensão .php).
 
-2. **Coloque suas migrations customizadas na pasta padrão do Laravel**
+
+2. Coloque suas migrations customizadas na pasta padrão do Laravel
 	 - Os arquivos devem estar em `database/migrations` do seu projeto Laravel.
-composer require shrrgnien/sequencial-migrations
-3. **Execute as migrations em ordem**
+
+3. Execute as migrations em ordem
 	 - Use o comando Artisan:
 		 ```shell
 		 php artisan migrate:base
 		 ```
-	 - Para reverter (down):
-	 - Edite a propriedade `$migrations` em `src/BaseMigration.php` e adicione os nomes das suas migrations.
-	 - Você pode misturar migrations nomeadas (classes) e migrations anônimas (arquivos que retornam um objeto Migration).
-	 - Exemplo:
-		 ```php
-		 protected array $migrations = [
-				 // Migration nomeada (classe PHP)
-				 'CreateProdutosTable',
-				 // Migration anônima (arquivo migration)
-				 '2025_08_11_135652_create_sis_solicitacoes_table',
-		 ];
+	 - Para reverter (down), use:
+		 ```shell
+		 php artisan migrate:base down
 		 ```
-	 - Para migrations nomeadas, use apenas o nome da classe (sem namespace).
-	 - Para migrations anônimas, use o nome do arquivo (sem extensão .php).
 ## Exemplo de migration nomeada
 
 ```php
