@@ -9,97 +9,113 @@ use Illuminate\Support\Str;
 trait HandlesCustomMigrationsTrait {
     public function runCustomMigrationsUp()
     {
-        $relatorio = [
-            'executadas' => 0,
-            'puladas' => 0,
-            'motivos' => [],
-            'erros' => [],
-        ];
-        $logPath = database_path('migrations/migrations_log.txt');
-        $log = [];
-        $ordemSugerida = [];
-        foreach ($this->migrations as $className) {
-            $file = $this->getMigrationFilePath($className);
-            $migrationInstance = null;
+        $executedCount = 0;
+        $skippedCount = 0;
+        $executedList = [];
+        $skippedList = [];
 
-            if ($file) {
-                if (class_exists($className)) {
-                    $migrationInstance = new $className();
-                } else {
-                    $ret = include $file;
-                    if (is_object($ret)) {
-                        $migrationInstance = $ret;
-                    }
-                }
-            }
-
-            if (is_object($migrationInstance) && method_exists($migrationInstance, 'up')) {
-                $table = $this->guessTableName($migrationInstance, 'up');
-                if ($table && Schema::hasTable($table)) {
-                    $relatorio['puladas']++;
-                    $relatorio['motivos'][] = "Pulada: $className (tabela '$table' já existe)";
-                    $this->registerMigration($className, $file);
-                    continue;
-                }
-                try {
-                    $migrationInstance->up();
-                    $this->registerMigration($className, $file);
-                    $relatorio['executadas']++;
-                } catch (\Illuminate\Database\QueryException $e) {
-                    $relatorio['puladas']++;
-                    $relatorio['motivos'][] = "Pulada: $className (erro de banco: " . $e->getMessage() . ")";
-                    $relatorio['erros'][] = [
-                        'migration' => $className,
-                        'erro' => $e->getMessage(),
-                        'arquivo' => $file,
-                    ];
-                    $log[] = "[ERRO] Migration: $className\nArquivo: $file\nErro: " . $e->getMessage() . "\n";
-                    // Sugestão simples: se erro for de FK, sugere mover para depois da tabela referenciada
-                    if (preg_match('/foreign key constraint.*references `(.*?)`/i', $e->getMessage(), $match)) {
-                        $ordemSugerida[] = "Sugestão: mova $className após a migration que cria a tabela '{$match[1]}'";
-                    }
-                    continue;
-                } catch (\Exception $e) {
-                    $relatorio['puladas']++;
-                    $relatorio['motivos'][] = "Pulada: $className (erro inesperado: " . $e->getMessage() . ")";
-                    $relatorio['erros'][] = [
-                        'migration' => $className,
-                        'erro' => $e->getMessage(),
-                        'arquivo' => $file,
-                    ];
-                    $log[] = "[ERRO] Migration: $className\nArquivo: $file\nErro: " . $e->getMessage() . "\n";
-                    continue;
-                }
+        // Detecta se está rodando via Artisan (para usar cores)
+        $isArtisan = defined('ARTISAN_BINARY') || (php_sapi_name() === 'cli' && isset($_SERVER['argv'][0]) && str_contains($_SERVER['argv'][0], 'artisan'));
+        $out = function($text, $color = null) use ($isArtisan) {
+            if ($isArtisan && $color) {
+                // Cores ANSI
+                $colors = [
+                    'green' => "\033[32m",
+                    'yellow' => "\033[33m",
+                    'red' => "\033[31m",
+                    'cyan' => "\033[36m",
+                    'magenta' => "\033[35m",
+                    'gray' => "\033[90m",
+                    'reset' => "\033[0m",
+                ];
+                $c = $colors[$color] ?? '';
+                $reset = $colors['reset'];
+                echo "$c$text$reset";
             } else {
-                $relatorio['puladas']++;
-                $relatorio['motivos'][] = "Pulada: $className (classe não encontrada ou inválida)";
+                echo $text;
+            }
+        };
+
+        foreach ($this->migrations as $migration) {
+            $migrationInstance = $this->resolveMigrationInstance($migration);
+            if (!$migrationInstance) {
+                $skippedCount++;
+                $skippedList[] = [
+                    'migration' => $migration,
+                    'reason' => 'classe não encontrada ou inválida',
+                    'type' => 'error',
+                ];
+                continue;
+            }
+
+            $table = $this->getMigrationTableName($migrationInstance);
+            if ($table && Schema::hasTable($table)) {
+                $skippedCount++;
+                $skippedList[] = [
+                    'migration' => $migration,
+                    'reason' => "tabela '$table' já existe",
+                    'type' => 'info',
+                ];
+                continue;
+            }
+
+            try {
+                $migrationInstance->up();
+                $executedCount++;
+                $executedList[] = $migration;
+            } catch (\Illuminate\Database\QueryException $e) {
+                $skippedCount++;
+                $skippedList[] = [
+                    'migration' => $migration,
+                    'reason' => 'erro de banco: ' . $e->getMessage(),
+                    'type' => 'error',
+                ];
+                $this->logMigrationError($migration, $e);
+                $this->suggestReorderingIfForeignKey($migration, $e);
+            } catch (\Exception $e) {
+                $skippedCount++;
+                $skippedList[] = [
+                    'migration' => $migration,
+                    'reason' => 'erro: ' . $e->getMessage(),
+                    'type' => 'error',
+                ];
+                $this->logMigrationError($migration, $e);
             }
         }
-        // Escreve log detalhado se houver erros
-        if (!empty($log)) {
-            $logContent = "==== LOG DE ERROS DAS MIGRATIONS ====".PHP_EOL.implode(PHP_EOL, $log);
-            if (!empty($ordemSugerida)) {
-                $logContent .= PHP_EOL."\nSugestões de reordenação:".PHP_EOL.implode(PHP_EOL, $ordemSugerida);
-            }
-            file_put_contents($logPath, $logContent, FILE_APPEND);
-        }
-        // Exibe relatório
-        echo "\n--- Relatório das migrations UP ---\n";
-        echo "Executadas: {$relatorio['executadas']}\n";
-        echo "Puladas: {$relatorio['puladas']}\n";
-        if (!empty($relatorio['motivos'])) {
-            echo "Motivos das puladas:\n";
-            foreach ($relatorio['motivos'] as $motivo) {
-                echo "- $motivo\n";
-            }
-        }
-        if (!empty($ordemSugerida)) {
-            echo "\nSugestões de reordenação:\n";
-            foreach ($ordemSugerida as $sug) {
-                echo "- $sug\n";
+
+        $divider = str_repeat('=', 60);
+        $section = function($title, $color = 'cyan') use ($out, $divider) {
+            $out("\n$divider\n", 'gray');
+            $out("$title\n", $color);
+            $out("$divider\n", 'gray');
+        };
+
+        $section('RELATÓRIO DAS MIGRATIONS UP', 'magenta');
+        $out("  ", null);
+        $out("Executadas: ", 'green');
+        $out("$executedCount\n", 'green');
+        $out("Puladas: ", 'yellow');
+        $out("$skippedCount\n", 'yellow');
+
+        if ($executedList) {
+            $section('MIGRATIONS EXECUTADAS', 'green');
+            foreach ($executedList as $mig) {
+                $out("  ✔ $mig\n", 'green');
             }
         }
-        echo "-------------------------------\n\n";
+
+        if ($skippedList) {
+            $section('MIGRATIONS PULADAS', 'yellow');
+            foreach ($skippedList as $skip) {
+                $icon = $skip['type'] === 'error' ? '✖' : '➔';
+                $color = $skip['type'] === 'error' ? 'red' : 'yellow';
+                $out("  $icon {$skip['migration']} ", $color);
+                $out("({$skip['reason']})\n", 'gray');
+            }
+        }
+
+        $out("\n", null);
+        $out($divider . "\n", 'gray');
     }
 
     public function runCustomMigrationsDown()
