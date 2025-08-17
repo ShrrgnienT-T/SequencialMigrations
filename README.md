@@ -1,6 +1,6 @@
-# Orderer Migrations
+# Sequencial Migrations
 
-Pacote Laravel para rodar migrations customizadas em ordem definida.
+Pacote Laravel para rodar migrations customizadas de forma sequencial (em ordem definida).
 
 ## Funcionalidades
 
@@ -16,7 +16,7 @@ Pacote Laravel para rodar migrations customizadas em ordem definida.
 ## Instalação
 
 ```shell
-composer require shrrgnien/orderer-migrations
+composer require shrrgnien/sequencial-migrations
 ```
 
 ## Uso
