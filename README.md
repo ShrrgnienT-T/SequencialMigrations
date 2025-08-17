@@ -2,7 +2,15 @@
 
 Pacote Laravel para rodar migrations customizadas de forma sequencial (em ordem definida).
 
-## Funcionalidades
+
+## Vantagens
+
+- Exibe cenários de erro de forma mais amigável: ao invés de quebrar toda a sequência de migrations, permite identificar e tratar apenas a migration problemática, sem interromper o restante.
+- Permite reajustar rapidamente a sequência: se uma migration falhar, é fácil corrigir e continuar de onde parou, sem precisar reverter tudo.
+- Evita erros comuns de deploy: ao garantir a ordem e pular migrations já aplicadas, reduz riscos de inconsistências em ambientes diferentes.
+- Facilita o trabalho com bancos de dados legados: muitos bancos legados foram criados sem migrations. Com este pacote, é possível rodar migrations específicas para alterar ou preparar o banco legado antes de migrá-lo, sem precisar executar todas as migrations novamente.
+- Útil em cenários com múltiplos bancos: permite rodar apenas migrations pontuais em bancos legados, sem afetar o banco novo ou o restante do sistema.
+- Ideal para transição de bancos legados para novos: possibilita migrar tabelas antigas para o padrão Laravel de forma controlada e incremental, aplicando partes do schema novo sem afetar o legado, tornando a migração mais segura e previsível.
 
 - Permite definir uma lista de migrations customizadas (nomeadas ou anônimas) para serem executadas em ordem específica.
 - Suporta tanto migrations padrão do Laravel quanto arquivos de migration anônimos.
