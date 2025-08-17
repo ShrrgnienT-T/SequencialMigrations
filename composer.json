@@ -1,0 +1,22 @@
+{
+  "name": "shrrgnien/sequencial-migrations",
+  "description": "Pacote para rodar migrations customizadas de forma sequencial no Laravel.",
+  "type": "library",
+  "license": "MIT",
+  "autoload": {
+    "psr-4": {
+      "SequencialMigrations\\": "src/"
+    }
+  },
+  "require": {
+    "php": ">=8.0",
+    "illuminate/support": "^8.0|^9.0|^10.0"
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "SequencialMigrations\\SequencialMigrationsServiceProvider"
+      ]
+    }
+  }
+}
