@@ -35,16 +35,17 @@ class ImportMigrationsToBase extends Command
             $list = $files;
         }
 
-        // 4. Gerar conteúdo do array $migrations
-        $array = $list->map(fn($name) => "        '".$name."',")->implode("\n");
+        // 4. Gerar conteúdo do array para o novo padrão (return array)
+        $array = $list->map(fn($name) => "    '".$name."',")->implode("\n");
 
-        // 5. Substituir o array $migrations no BaseMigration.php
-        $content = File::get($baseFile);
-        $content = preg_replace(
-            '/protected array \$migrations = \[.*?\];/s',
-            "protected array \$migrations = [\n".$array."\n    ];",
-            $content
-        );
+        $content = <<<PHP
+    <?php
+    // Edite este array para definir a ordem das suas migrations customizadas.
+    // Este arquivo é gerado automaticamente pelo comando migrate:import-base
+    return [
+    {$array}
+    ];
+    PHP;
         File::put($baseFile, $content);
 
         $this->info("Arquivo BaseMigration.php atualizado com as migrations do tipo: $type");
