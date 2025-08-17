@@ -11,13 +11,10 @@
 // 3. Importar apenas as migrations já executadas:
 //    php artisan migrate:import-base executed
 //
-// Ou insira as migrations manualmente no array $migrations abaixo para definir a ordem de execução.
-
-use SequencialMigrations\BaseMigration;
-
-class CustomBaseMigration extends BaseMigration
-{
-    protected array $migrations = [
-        // Adicione aqui suas migrations
-    ];
-}
+// Edite este array para definir a ordem das suas migrations customizadas.
+// Exemplo:
+// 'CreateProdutosTable',
+// '2025_08_11_135652_create_sis_solicitacoes_table',
+return [
+    // Adicione aqui suas migrations
+];
