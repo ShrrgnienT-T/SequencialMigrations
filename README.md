@@ -42,9 +42,42 @@ Isso irá criar o arquivo `database/migrations/BaseMigration.php` no seu projeto
 
 
 
-## Como usar
 
-1. Edite a propriedade `$migrations` em `database/migrations/BaseMigration.php` e adicione os nomes das suas migrations.
+## Importando migrations automaticamente para o BaseMigration
+
+Você pode popular o array `$migrations` do arquivo `database/migrations/BaseMigration.php` automaticamente com as migrations do seu projeto usando o comando Artisan:
+
+```shell
+php artisan migrate:import-base all
+```
+
+Opções disponíveis:
+
+- `all`: importa todas as migrations (nomeadas e anônimas) encontradas na pasta `database/migrations` (exceto o próprio BaseMigration.php), sem duplicidade.
+- `pending`: importa apenas as migrations que ainda não foram executadas (pendentes).
+- `executed`: importa apenas as migrations já executadas (presentes na tabela `migrations`).
+
+Exemplos:
+
+Importar todas as migrations:
+```shell
+php artisan migrate:import-base all
+```
+
+Importar apenas as pendentes:
+```shell
+php artisan migrate:import-base pending
+```
+
+Importar apenas as já executadas:
+```shell
+php artisan migrate:import-base executed
+```
+
+O comando irá atualizar automaticamente o array `$migrations` do arquivo BaseMigration.php.
+
+
+1. Edite manualmente ou utilize o comando acima para popular a propriedade `$migrations` em `database/migrations/BaseMigration.php`.
 	 - Você pode misturar migrations nomeadas (classes) e migrations anônimas (arquivos que retornam um objeto Migration).
 	 - Exemplo:
 		 ```php

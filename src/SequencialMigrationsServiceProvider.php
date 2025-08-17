@@ -16,6 +16,7 @@ class SequencialMigrationsServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 \SequencialMigrations\Console\RunBaseMigration::class,
+                \SequencialMigrations\Console\ImportMigrationsToBase::class,
             ]);
 
             // Publica o stub BaseMigration.php para database/migrations
