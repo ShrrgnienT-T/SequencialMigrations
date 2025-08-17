@@ -27,7 +27,13 @@ class RunBaseMigration extends Command
     public function handle()
     {
         $direction = $this->argument('direction');
-        $base = new BaseMigration();
+
+        // Tenta usar CustomBaseMigration se existir
+        if (class_exists('CustomBaseMigration')) {
+            $base = new \CustomBaseMigration();
+        } else {
+            $base = new BaseMigration();
+        }
 
         if ($direction === 'down') {
             $this->info('Revertendo migrations🔻...');

@@ -15,8 +15,9 @@
 
 use SequencialMigrations\BaseMigration;
 
-return new class extends BaseMigration {
+class CustomBaseMigration extends BaseMigration
+{
     protected array $migrations = [
         // Adicione aqui suas migrations
     ];
-};
+}
