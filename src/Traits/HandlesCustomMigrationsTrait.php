@@ -9,16 +9,19 @@ use Illuminate\Support\Str;
 trait HandlesCustomMigrationsTrait {
     public function runCustomMigrationsUp()
     {
+        $relatorio = [
+            'executadas' => 0,
+            'puladas' => 0,
+            'motivos' => [],
+        ];
         foreach ($this->migrations as $className) {
             $file = $this->getMigrationFilePath($className);
             $migrationInstance = null;
 
             if ($file) {
                 if (class_exists($className)) {
-                    // Migration nomeada: instancia normalmente
                     $migrationInstance = new $className();
                 } else {
-                    // Migration anônima: inclui o arquivo e espera um objeto
                     $ret = include $file;
                     if (is_object($ret)) {
                         $migrationInstance = $ret;
@@ -29,29 +32,49 @@ trait HandlesCustomMigrationsTrait {
             if (is_object($migrationInstance) && method_exists($migrationInstance, 'up')) {
                 $table = $this->guessTableName($migrationInstance, 'up');
                 if ($table && Schema::hasTable($table)) {
-                    echo "Tabela '$table' já existe. Pulando migration $className.\n";
+                    $relatorio['puladas']++;
+                    $relatorio['motivos'][] = "Pulada: $className (tabela '$table' já existe)";
                     $this->registerMigration($className, $file);
                     continue;
                 }
                 try {
                     $migrationInstance->up();
                     $this->registerMigration($className, $file);
+                    $relatorio['executadas']++;
                 } catch (\Illuminate\Database\QueryException $e) {
                     if (str_contains($e->getMessage(), 'already exists')) {
-                        echo "⚠️  Tabela já existe ao rodar $className. Pulando esta migration! 😅\n";
+                        $relatorio['puladas']++;
+                        $relatorio['motivos'][] = "Pulada: $className (tabela já existe ao rodar migration)";
                         $this->registerMigration($className, $file);
                         continue;
                     }
                     throw $e;
                 }
             } else {
-                echo "Migration class $className não encontrada ou inválida!\n";
+                $relatorio['puladas']++;
+                $relatorio['motivos'][] = "Pulada: $className (classe não encontrada ou inválida)";
             }
         }
+        // Exibe relatório
+        echo "\n--- Relatório das migrations UP ---\n";
+        echo "Executadas: {$relatorio['executadas']}\n";
+        echo "Puladas: {$relatorio['puladas']}\n";
+        if (!empty($relatorio['motivos'])) {
+            echo "Motivos das puladas:\n";
+            foreach ($relatorio['motivos'] as $motivo) {
+                echo "- $motivo\n";
+            }
+        }
+        echo "-------------------------------\n\n";
     }
 
     public function runCustomMigrationsDown()
     {
+        $relatorio = [
+            'executadas' => 0,
+            'puladas' => 0,
+            'motivos' => [],
+        ];
         foreach (array_reverse($this->migrations) as $className) {
             $file = $this->getMigrationFilePath($className);
             $migrationInstance = null;
@@ -70,16 +93,30 @@ trait HandlesCustomMigrationsTrait {
             if (is_object($migrationInstance) && method_exists($migrationInstance, 'down')) {
                 $table = $this->guessTableName($migrationInstance, 'down');
                 if ($table && !Schema::hasTable($table)) {
-                    echo "Tabela '$table' não existe. Pulando down da migration $className.\n";
+                    $relatorio['puladas']++;
+                    $relatorio['motivos'][] = "Pulada: $className (tabela '$table' não existe)";
                     $this->removeMigration($className, $file);
                     continue;
                 }
                 $migrationInstance->down();
                 $this->removeMigration($className, $file);
+                $relatorio['executadas']++;
             } else {
-                echo "Migration class $className não encontrada ou inválida!\n";
+                $relatorio['puladas']++;
+                $relatorio['motivos'][] = "Pulada: $className (classe não encontrada ou inválida)";
             }
         }
+        // Exibe relatório
+        echo "\n--- Relatório das migrations DOWN ---\n";
+        echo "Executadas: {$relatorio['executadas']}\n";
+        echo "Puladas: {$relatorio['puladas']}\n";
+        if (!empty($relatorio['motivos'])) {
+            echo "Motivos das puladas:\n";
+            foreach ($relatorio['motivos'] as $motivo) {
+                echo "- $motivo\n";
+            }
+        }
+        echo "-------------------------------\n\n";
     }
 
     protected function getMigrationFilePath(string $className): string
