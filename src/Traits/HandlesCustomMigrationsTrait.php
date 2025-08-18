@@ -141,7 +141,7 @@ trait HandlesCustomMigrationsTrait {
             }
 
             if (is_object($migrationInstance) && method_exists($migrationInstance, 'down')) {
-                $table = $this->guessTableName($migrationInstance, 'down');
+                $table = $this->guessTableName($migrationInstance);
                 if ($table && !Schema::hasTable($table)) {
                     $relatorio['puladas']++;
                     $relatorio['motivos'][] = "Pulada: $className (tabela '$table' não existe)";
