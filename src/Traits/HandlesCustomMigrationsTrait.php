@@ -239,4 +239,28 @@ trait HandlesCustomMigrationsTrait {
         }
         return null;
     }
+
+    /**
+     * Instancia uma migration pelo nome da classe ou pelo nome do arquivo (anônimo).
+     */
+    protected function resolveMigrationInstance(string $migration)
+    {
+        // Se for uma classe existente, instancia normalmente
+        if (class_exists($migration)) {
+            return new $migration();
+        }
+
+        // Tenta localizar o arquivo na pasta migrations
+        $file = database_path('migrations/' . $migration . '.php');
+        if (file_exists($file)) {
+            $ret = include $file;
+            // Se o arquivo retorna um objeto (migration anônima)
+            if (is_object($ret)) {
+                return $ret;
+            }
+        }
+
+        // Não encontrado
+        return null;
+    }
 }
